@@ -7,6 +7,11 @@
 </head>
 <body>
 	<canvas width="600" height="600" id="canvas">Canvas is not supported.</canvas><br>
-	ドラッグで移動
+	ドラッグで移動<br>
+	<label>日周運動 <input type="range" id="diurnal" min="0" max="360" value="0" style="width: 500px;"></label>
+	<label><input type="checkbox" id="auto-diurnal" checked>自動</label><br>
+
+	<label>観測地点の経度 <input type="range" id="longitude" min="0" max="360" value="0" style="width: 500px;"></label><br>
+	<label>観測地点の緯度 <input type="range" id="latitude" min="0" max="180" value="90" style="width: 500px;"></label>
 </body>
 </html>
