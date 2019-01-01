@@ -1,6 +1,12 @@
 import Quaternion from "quaternion";
 
 const STAR_NUM = 1000;
+const LABELS = [
+	{text: "tostiex", v: [0, 1, 0]},
+	{text: "vined", v: [-1, 0, 0]},
+	{text: "nulov", v: [0, -1, 0]},
+	{text: "pi'en", v: [1, 0, 0]}
+];
 
 interface Star {
 	azimuth: number;
@@ -22,6 +28,7 @@ function main() {
 	const width = canvas.width;
 	const height = canvas.height;
 	const ctx = canvas.getContext("2d")!;
+	ctx.font = "16px sans-serif";
 
 	let lookAzimuth = 0;
 	let lookAltitude = 0;
@@ -47,7 +54,7 @@ function main() {
 		ctx.fillRect(0, 0, width, height);
 
 		const view = horizontalToViewQuaternion(lookAzimuth, lookAltitude);
-		const h = equatorialToHorizontal(diurnal, longitude, latitude);
+		const h = equatorialToHorizontalQuaternion(diurnal, longitude, latitude);
 		const scale = Math.tan(fov / 2);
 
 		ctx.lineJoin = "round";
@@ -102,6 +109,16 @@ function main() {
 			}
 		}
 		ctx.stroke();
+
+		ctx.fillStyle = "#fff";
+		ctx.strokeStyle = "#000";
+		ctx.lineWidth = 3;
+		for(const {text, v} of LABELS) {
+			const pos = viewToScreen(view.rotateVector(v), scale, width, height);
+			if (pos == null) continue;
+			ctx.strokeText(text, pos.x, pos.y);
+			ctx.fillText(text, pos.x, pos.y);
+		}
 
 		ctx.fillStyle = "#fff";
 		ctx.strokeStyle = "#fff";
@@ -193,7 +210,7 @@ function sphericalToOrthogonal(longitude: number, latitude: number) {
 	];
 }
 
-function equatorialToHorizontal(rotation: number, longitude: number, latitude: number): Quaternion {
+function equatorialToHorizontalQuaternion(rotation: number, longitude: number, latitude: number): Quaternion {
 	return Quaternion.fromAxisAngle([1, 0, 0], latitude - Math.PI / 2)
 		.mul(Quaternion.fromAxisAngle([0, 0, 1], -rotation - longitude));
 }
