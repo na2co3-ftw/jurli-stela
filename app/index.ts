@@ -47,19 +47,18 @@ function main() {
 		ctx.fillRect(0, 0, width, height);
 
 		const view = horizontalToViewQuaternion(lookAzimuth, lookAltitude);
-		const h = view.mul(equatorialToHorizontal(diurnal, longitude, latitude));
+		const h = equatorialToHorizontal(diurnal, longitude, latitude);
 		const scale = Math.tan(fov / 2);
 
-		ctx.strokeStyle = "#888";
-		ctx.lineWidth = 1;
 		ctx.lineJoin = "round";
-		ctx.beginPath();
 		for (let i = -5; i < 6; i++) {
 			const altitude = i * Math.PI / 12;
 			let connect = false;
+			ctx.beginPath();
 			for (let j = 0; j <= 24; j++) {
 				const azimuth = j * Math.PI / 12;
-				const pos = convert(view, azimuth, altitude);
+				const v = view.rotateVector(sphericalToOrthogonal(azimuth, altitude));
+				const pos = viewToScreen(v, scale, width, height);
 				if (pos == null) {
 					connect = false;
 					continue;
@@ -71,15 +70,25 @@ function main() {
 					connect = true;
 				}
 			}
+			if (i == 0) {
+				ctx.strokeStyle = "#fff";
+				ctx.lineWidth = 3;
+			} else {
+				ctx.strokeStyle = "#666";
+				ctx.lineWidth = 1;
+			}
+			ctx.stroke();
 		}
-		ctx.stroke();
+		ctx.strokeStyle = "#666";
+		ctx.lineWidth = 1;
 		ctx.beginPath();
 		for (let i = 0; i < 24; i++) {
 			const azimuth = i * Math.PI / 12;
 			let connect = false;
 			for (let j = -6; j <= 6; j++) {
 				const altitude = j * Math.PI / 12;
-				const pos = convert(view, azimuth, altitude);
+				const v = view.rotateVector(sphericalToOrthogonal(azimuth, altitude));
+				const pos = viewToScreen(v, scale, width, height);
 				if (pos == null) {
 					connect = false;
 					continue;
@@ -95,27 +104,21 @@ function main() {
 		ctx.stroke();
 
 		ctx.fillStyle = "#fff";
+		ctx.strokeStyle = "#fff";
+		ctx.lineWidth = 1;
 		for (const star of stars) {
-			const pos = convert(h, star.azimuth, star.altitude);
+			const horizontal = h.rotateVector(sphericalToOrthogonal(star.azimuth, star.altitude));
+			const visible = horizontal[2] >= 0;
+			const v = view.rotateVector(horizontal);
+			const pos = viewToScreen(v, scale, width, height);
 			if (pos == null) continue;
 			ctx.beginPath();
 			ctx.ellipse(pos.x, pos.y, 3, 3, 0, 0, Math.PI * 2);
-			ctx.fill();
-		}
-
-		function convert(q: Quaternion, azimuth: number, altitude: number): {x: number, y: number} | null {
-			const orig = sphericalToOrthogonal(azimuth, altitude);
-			const pos = q.rotateVector(orig);
-			if (pos[1] <= 0.1) {
-				return null;
+			if (visible) {
+				ctx.fill();
+			} else {
+				ctx.stroke();
 			}
-
-			const x = pos[0] / pos[1];
-			const y = pos[2] / pos[1];
-			return {
-				x: (1 + x / scale) * canvas.width / 2,
-				y: (1 - y / scale) * canvas.height / 2
-			};
 		}
 	}
 
@@ -198,4 +201,17 @@ function equatorialToHorizontal(rotation: number, longitude: number, latitude: n
 function horizontalToViewQuaternion(lookAzimuth: number, lookAltitude: number): Quaternion {
 	return Quaternion.fromAxisAngle([1, 0, 0], -lookAltitude)
 		.mul(Quaternion.fromAxisAngle([0, 0, 1], lookAzimuth));
+}
+
+function viewToScreen(v: number[], scale: number, width: number, height: number): {x: number, y: number} | null {
+	if (v[1] <= 0.1) {
+		return null;
+	}
+
+	const x = v[0] / v[1];
+	const y = v[2] / v[1];
+	return {
+		x: (1 + x / scale) * width / 2,
+		y: (1 - y / scale) * height / 2
+	};
 }
