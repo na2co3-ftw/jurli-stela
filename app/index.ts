@@ -1,4 +1,5 @@
 import Quaternion from "quaternion";
+import Color from "color";
 
 const STAR_NUM = 1000;
 const LABELS = [
@@ -34,11 +35,16 @@ function main() {
 	let lookAltitude = 0;
 	let fov = Math.PI / 4;
 
+	let annual = 0;
+	let autoAnnual = true;
+	let obliquity = 23 / 180 * Math.PI;
+
 	let diurnal = 0;
 	let autoDiurnal = true;
 	let longitude = 0;
-	let latitude = 0;
+	let latitude = -35 / 180 * Math.PI;
 
+	let animating = true;
 	let dragX: number;
 	let dragY: number;
 
@@ -46,16 +52,27 @@ function main() {
 	document.addEventListener("mouseup", mouseup);
 	document.getElementById("diurnal")!.addEventListener("input", changeDiurnal);
 	document.getElementById("auto-diurnal")!.addEventListener("change", changeAutoDiurnal);
+	document.getElementById("annual")!.addEventListener("input", changeAnnual);
+	document.getElementById("auto-annual")!.addEventListener("change", changeAutoAnnual);
+	document.getElementById("obliquity")!.addEventListener("input", changeObliquity);
 	document.getElementById("longitude")!.addEventListener("input", changeLongitude);
 	document.getElementById("latitude")!.addEventListener("input", changeLatitude);
 
 	function render() {
-		ctx.fillStyle = "#000";
-		ctx.fillRect(0, 0, width, height);
-
 		const view = horizontalToViewQuaternion(lookAzimuth, lookAltitude);
 		const h = equatorialToHorizontalQuaternion(diurnal, longitude, latitude);
 		const scale = Math.tan(fov / 2);
+
+		const sunHPos = h.mul(eclipticToEquatorial(obliquity)).rotateVector(sphericalToOrthogonal(annual, 0));
+
+		if (sunHPos[2] >= 0.1) {
+			ctx.fillStyle = "#bdf";
+		} else if (sunHPos[2] <= -0.1 ) {
+			ctx.fillStyle = "#000";
+		} else {
+			ctx.fillStyle = Color("#000").mix(Color("#bdf"), sunHPos[2] * 5 + 0.5).string();
+		}
+		ctx.fillRect(0, 0, width, height);
 
 		ctx.lineJoin = "round";
 		for (let i = -5; i < 6; i++) {
@@ -137,6 +154,21 @@ function main() {
 				ctx.stroke();
 			}
 		}
+
+		const sunVPos = view.rotateVector(sunHPos);
+		const sunPos = viewToScreen(sunVPos, scale, width, height);
+		if (sunPos != null) {
+			ctx.fillStyle = "#fff";
+			ctx.strokeStyle = "#fff";
+			ctx.beginPath();
+			ctx.ellipse(sunPos.x, sunPos.y, 5, 5, 0, 0, Math.PI * 2);
+			ctx.fill();
+
+			ctx.strokeStyle = "#000";
+			ctx.lineWidth = 3;
+			ctx.strokeText("dovied", sunPos.x, sunPos.y);
+			ctx.fillText("dovied", sunPos.x, sunPos.y);
+		}
 	}
 
 	function mousedown(e: MouseEvent) {
@@ -163,23 +195,43 @@ function main() {
 
 	function changeDiurnal(e: Event) {
 		diurnal = parseInt((e.target as HTMLInputElement).value, 10) / 180 * Math.PI;
-		if (!autoDiurnal)
+		if (!animating)
+			render();
+	}
+	function changeAnnual(e: Event) {
+		annual = parseInt((e.target as HTMLInputElement).value, 10) / 180 * Math.PI;
+		if (!animating)
+			render();
+	}
+	function changeObliquity(e: Event) {
+		obliquity = parseInt((e.target as HTMLInputElement).value, 10) / 180 * Math.PI;
+		if (!animating)
 			render();
 	}
 	function changeLongitude(e: Event) {
 		longitude = parseInt((e.target as HTMLInputElement).value, 10) / 180 * Math.PI;
-		if (!autoDiurnal)
+		if (!animating)
 			render();
 	}
 	function changeLatitude(e: Event) {
 		latitude = (parseInt((e.target as HTMLInputElement).value, 10) - 90) / 180 * Math.PI;
-		if (!autoDiurnal)
+		if (!animating)
 			render();
 	}
 
 	function changeAutoDiurnal(e: Event) {
 		autoDiurnal = (e.target as HTMLInputElement).checked;
-		if (autoDiurnal) {
+		const prevAnimating = animating;
+		animating = autoDiurnal || autoAnnual;
+		if (!prevAnimating && animating) {
+			animate();
+		}
+	}
+	function changeAutoAnnual(e: Event) {
+		autoAnnual = (e.target as HTMLInputElement).checked;
+		const prevAnimating = animating;
+		animating = autoDiurnal || autoAnnual;
+		if (!prevAnimating && animating) {
 			animate();
 		}
 	}
@@ -192,9 +244,16 @@ function main() {
 			}
 			(document.getElementById("diurnal") as HTMLInputElement).value = Math.floor(diurnal * 180 / Math.PI).toString();
 		}
+		if (autoAnnual) {
+			annual += 0.001;
+			if (annual >= Math.PI * 2) {
+				annual -= Math.PI * 2;
+			}
+			(document.getElementById("annual") as HTMLInputElement).value = Math.floor(annual * 180 / Math.PI).toString();
+		}
 		render();
 
-		if (autoDiurnal) {
+		if (animating) {
 			requestAnimationFrame(animate);
 		}
 	}
@@ -208,6 +267,10 @@ function sphericalToOrthogonal(longitude: number, latitude: number) {
 		Math.cos(latitude) * Math.cos(-longitude),
 		Math.sin(latitude)
 	];
+}
+
+function eclipticToEquatorial(obliquity: number): Quaternion {
+	return Quaternion.fromAxisAngle([0, 1, 0], obliquity);
 }
 
 function equatorialToHorizontalQuaternion(rotation: number, longitude: number, latitude: number): Quaternion {
