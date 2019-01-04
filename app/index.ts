@@ -44,6 +44,7 @@ function main() {
 	let longitude = 0;
 	let latitude = -35 / 180 * Math.PI;
 
+	let prevTimeStamp: number | null = null;
 	let animating = true;
 	let dragX: number;
 	let dragY: number;
@@ -81,8 +82,8 @@ function main() {
 			const altitude = i * Math.PI / 12;
 			let connect = false;
 			ctx.beginPath();
-			for (let j = 0; j <= 24; j++) {
-				const azimuth = j * Math.PI / 12;
+			for (let j = 0; j <= 96; j++) {
+				const azimuth = j * Math.PI / 48;
 				const v = view.rotateVector(sphericalToOrthogonal(azimuth, altitude));
 				const pos = viewToScreen(v, scale, width, height, resolution);
 				if (pos == null) {
@@ -111,8 +112,8 @@ function main() {
 		for (let i = 0; i < 24; i++) {
 			const azimuth = i * Math.PI / 12;
 			let connect = false;
-			for (let j = -6; j <= 6; j++) {
-				const altitude = j * Math.PI / 12;
+			for (let j = -24; j <= 24; j++) {
+				const altitude = j * Math.PI / 48;
 				const v = view.rotateVector(sphericalToOrthogonal(azimuth, altitude));
 				const pos = viewToScreen(v, scale, width, height, resolution);
 				if (pos == null) {
@@ -141,7 +142,7 @@ function main() {
 		}
 
 		ctx.fillStyle = "#fff";
-		ctx.strokeStyle = "#fff";
+		ctx.strokeStyle = "#666";
 		ctx.lineWidth = 1;
 		for (const star of stars) {
 			const horizontal = h.rotateVector(sphericalToOrthogonal(star.azimuth, star.altitude));
@@ -260,20 +261,26 @@ function main() {
 		}
 	}
 
-	function animate() {
-		if (autoDiurnal) {
-			diurnal += 0.01;
-			if (diurnal >= Math.PI * 2) {
-				diurnal -= Math.PI * 2;
+	function animate(timeStamp?: number) {
+		if (typeof timeStamp != "undefined") {
+			if (prevTimeStamp != null) {
+				let deltaTime = timeStamp - prevTimeStamp;
+				if (autoDiurnal) {
+					diurnal += deltaTime / 2000;
+					if (diurnal >= Math.PI * 2) {
+						diurnal -= Math.PI * 2;
+					}
+					(document.getElementById("diurnal") as HTMLInputElement).value = Math.floor(diurnal * 180 / Math.PI).toString();
+				}
+				if (autoAnnual) {
+					annual +=  deltaTime / 20000;
+					if (annual >= Math.PI * 2) {
+						annual -= Math.PI * 2;
+					}
+					(document.getElementById("annual") as HTMLInputElement).value = Math.floor(annual * 180 / Math.PI).toString();
+				}
 			}
-			(document.getElementById("diurnal") as HTMLInputElement).value = Math.floor(diurnal * 180 / Math.PI).toString();
-		}
-		if (autoAnnual) {
-			annual += 0.001;
-			if (annual >= Math.PI * 2) {
-				annual -= Math.PI * 2;
-			}
-			(document.getElementById("annual") as HTMLInputElement).value = Math.floor(annual * 180 / Math.PI).toString();
+			prevTimeStamp = timeStamp;
 		}
 		render();
 
