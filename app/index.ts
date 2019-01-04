@@ -33,7 +33,7 @@ function main() {
 
 	let lookAzimuth = 0;
 	let lookAltitude = 0;
-	let fov = Math.PI / 4;
+	let scale = Math.tan(Math.PI / 8);
 
 	let annual = 0;
 	let autoAnnual = true;
@@ -52,6 +52,7 @@ function main() {
 
 	canvas.addEventListener("mousedown", mousedown);
 	document.addEventListener("mouseup", mouseup);
+	canvas.addEventListener("wheel", wheel);
 	document.getElementById("diurnal")!.addEventListener("input", changeDiurnal);
 	document.getElementById("auto-diurnal")!.addEventListener("change", changeAutoDiurnal);
 	document.getElementById("annual")!.addEventListener("input", changeAnnual);
@@ -63,7 +64,6 @@ function main() {
 	function render() {
 		const view = horizontalToViewQuaternion(lookAzimuth, lookAltitude);
 		const h = equatorialToHorizontalQuaternion(diurnal, longitude, latitude);
-		const scale = Math.tan(fov / 2);
 
 		const sunHPos = h.mul(eclipticToEquatorial(obliquity)).rotateVector(sphericalToOrthogonal(annual, 0));
 
@@ -184,6 +184,17 @@ function main() {
 			render();
 	}
 
+	function wheel(e: WheelEvent) {
+		if (e.deltaY < 0) {
+			scale /= 1.2;
+		} else if (e.deltaY > 0) {
+			if (scale <= 1.4) {
+				scale *= 1.2;
+			}
+		}
+		if (!animating)
+			render();
+	}
 	function mousedown(e: MouseEvent) {
 		dragX = e.pageX;
 		dragY = e.pageY;
@@ -193,8 +204,8 @@ function main() {
 		document.removeEventListener("mousemove", mousemove);
 	}
 	function mousemove(e: MouseEvent) {
-		lookAzimuth -= (e.pageX - dragX) / resolution;
-		lookAltitude += (e.pageY - dragY) / resolution;
+		lookAzimuth -= (e.pageX - dragX) * 3 / resolution * scale;
+		lookAltitude += (e.pageY - dragY) * 3 / resolution * scale;
 		if (lookAltitude > Math.PI / 2) {
 			lookAltitude = Math.PI / 2;
 		} else if (lookAltitude < -Math.PI / 2) {
