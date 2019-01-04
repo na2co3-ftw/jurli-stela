@@ -1,7 +1,7 @@
 import Quaternion from "quaternion";
 import Color from "color";
 
-const STAR_NUM = 1000;
+const STAR_NUM = 2000;
 const LABELS = [
 	{text: "tostiex", v: [0, 1, 0]},
 	{text: "vined", v: [-1, 0, 0]},
@@ -26,10 +26,10 @@ document.addEventListener("DOMContentLoaded", main);
 
 function main() {
 	const canvas = document.getElementById("canvas") as HTMLCanvasElement;
-	const width = canvas.width;
-	const height = canvas.height;
+	let width = canvas.width;
+	let height = canvas.height;
+	let resolution = Math.min(width, height);
 	const ctx = canvas.getContext("2d")!;
-	ctx.font = "16px sans-serif";
 
 	let lookAzimuth = 0;
 	let lookAltitude = 0;
@@ -47,6 +47,8 @@ function main() {
 	let animating = true;
 	let dragX: number;
 	let dragY: number;
+
+	window.addEventListener("resize", resize);
 
 	canvas.addEventListener("mousedown", mousedown);
 	document.addEventListener("mouseup", mouseup);
@@ -82,7 +84,7 @@ function main() {
 			for (let j = 0; j <= 24; j++) {
 				const azimuth = j * Math.PI / 12;
 				const v = view.rotateVector(sphericalToOrthogonal(azimuth, altitude));
-				const pos = viewToScreen(v, scale, width, height);
+				const pos = viewToScreen(v, scale, width, height, resolution);
 				if (pos == null) {
 					connect = false;
 					continue;
@@ -112,7 +114,7 @@ function main() {
 			for (let j = -6; j <= 6; j++) {
 				const altitude = j * Math.PI / 12;
 				const v = view.rotateVector(sphericalToOrthogonal(azimuth, altitude));
-				const pos = viewToScreen(v, scale, width, height);
+				const pos = viewToScreen(v, scale, width, height, resolution);
 				if (pos == null) {
 					connect = false;
 					continue;
@@ -127,11 +129,12 @@ function main() {
 		}
 		ctx.stroke();
 
+		ctx.font = "16px sans-serif";
 		ctx.fillStyle = "#fff";
 		ctx.strokeStyle = "#000";
 		ctx.lineWidth = 3;
 		for(const {text, v} of LABELS) {
-			const pos = viewToScreen(view.rotateVector(v), scale, width, height);
+			const pos = viewToScreen(view.rotateVector(v), scale, width, height, resolution);
 			if (pos == null) continue;
 			ctx.strokeText(text, pos.x, pos.y);
 			ctx.fillText(text, pos.x, pos.y);
@@ -144,7 +147,7 @@ function main() {
 			const horizontal = h.rotateVector(sphericalToOrthogonal(star.azimuth, star.altitude));
 			const visible = horizontal[2] >= 0;
 			const v = view.rotateVector(horizontal);
-			const pos = viewToScreen(v, scale, width, height);
+			const pos = viewToScreen(v, scale, width, height, resolution);
 			if (pos == null) continue;
 			ctx.beginPath();
 			ctx.ellipse(pos.x, pos.y, 3, 3, 0, 0, Math.PI * 2);
@@ -156,7 +159,7 @@ function main() {
 		}
 
 		const sunVPos = view.rotateVector(sunHPos);
-		const sunPos = viewToScreen(sunVPos, scale, width, height);
+		const sunPos = viewToScreen(sunVPos, scale, width, height, resolution);
 		if (sunPos != null) {
 			ctx.fillStyle = "#fff";
 			ctx.strokeStyle = "#fff";
@@ -171,6 +174,16 @@ function main() {
 		}
 	}
 
+	function resize() {
+		width = window.innerWidth;
+		height = window.innerHeight;
+		resolution = Math.min(width, height);
+		canvas.width = width;
+		canvas.height = height;
+		if (!animating)
+			render();
+	}
+
 	function mousedown(e: MouseEvent) {
 		dragX = e.pageX;
 		dragY = e.pageY;
@@ -180,8 +193,8 @@ function main() {
 		document.removeEventListener("mousemove", mousemove);
 	}
 	function mousemove(e: MouseEvent) {
-		lookAzimuth -= (e.pageX - dragX) * 0.002;
-		lookAltitude += (e.pageY - dragY) * 0.002;
+		lookAzimuth -= (e.pageX - dragX) / resolution;
+		lookAltitude += (e.pageY - dragY) / resolution;
 		if (lookAltitude > Math.PI / 2) {
 			lookAltitude = Math.PI / 2;
 		} else if (lookAltitude < -Math.PI / 2) {
@@ -258,6 +271,7 @@ function main() {
 		}
 	}
 
+	resize();
 	animate();
 }
 
@@ -283,7 +297,7 @@ function horizontalToViewQuaternion(lookAzimuth: number, lookAltitude: number): 
 		.mul(Quaternion.fromAxisAngle([0, 0, 1], lookAzimuth));
 }
 
-function viewToScreen(v: number[], scale: number, width: number, height: number): {x: number, y: number} | null {
+function viewToScreen(v: number[], scale: number, width: number, height: number, resolution: number): {x: number, y: number} | null {
 	if (v[1] <= 0.1) {
 		return null;
 	}
@@ -291,7 +305,7 @@ function viewToScreen(v: number[], scale: number, width: number, height: number)
 	const x = v[0] / v[1];
 	const y = v[2] / v[1];
 	return {
-		x: (1 + x / scale) * width / 2,
-		y: (1 - y / scale) * height / 2
+		x: (x / scale) * resolution + width / 2,
+		y: (-y / scale) * resolution + height / 2
 	};
 }

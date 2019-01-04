@@ -4,19 +4,41 @@
 	<meta charset="UTF-8">
 	<title>stela</title>
 	<script src="scripts.js"></script>
+	<style>
+		body {
+			margin: 0;
+			padding: 0;
+		}
+		#canvas {
+			position: absolute;
+			left: 0;
+			right: 0;
+			user-select: none;
+		}
+		#control {
+			z-index: 100;
+			position: absolute;
+			right: 5px;
+			bottom: 5px;
+			width: auto;
+			background: #fff;
+			padding: 5px 10px;
+		}
+	</style>
 </head>
 <body>
-	<canvas width="600" height="600" id="canvas">Canvas is not supported.</canvas><br>
-	画面ドラッグで視野を移動<br>
+	<canvas width="600" height="600" id="canvas">Canvas is not supported.</canvas>
 
-	<label>日周運動 <input type="range" id="diurnal" min="0" max="360" value="0" style="width: 500px;"></label>
-	<label><input type="checkbox" id="auto-diurnal" checked>自動</label><br>
+	<div id="control">
+		<label>日周運動 <input type="range" id="diurnal" min="0" max="360" value="0" style="width: 500px;"></label>
+		<label><input type="checkbox" id="auto-diurnal" checked>自動</label><br>
 
-	<label>年周運動 <input type="range" id="annual" min="0" max="360" value="0" style="width: 500px;"></label>
-	<label><input type="checkbox" id="auto-annual" checked>自動</label><br>
+		<label>年周運動 <input type="range" id="annual" min="0" max="360" value="0" style="width: 500px;"></label>
+		<label><input type="checkbox" id="auto-annual" checked>自動</label><br>
 
-	<label>黄道傾斜角 <input type="range" id="obliquity" min="0" max="360" value="23" style="width: 500px;"></label><br>
-	<label>観測地点の経度 <input type="range" id="longitude" min="0" max="360" value="0" style="width: 500px;"></label><br>
-	<label>観測地点の緯度 <input type="range" id="latitude" min="0" max="180" value="55" style="width: 500px;"></label>
+		<label>黄道傾斜角 <input type="range" id="obliquity" min="0" max="360" value="23" style="width: 500px;"></label><br>
+		<label>観測地点の経度 <input type="range" id="longitude" min="0" max="360" value="0" style="width: 500px;"></label><br>
+		<label>観測地点の緯度 <input type="range" id="latitude" min="0" max="180" value="55" style="width: 500px;"></label>
+	</div>
 </body>
 </html>
