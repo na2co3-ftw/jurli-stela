@@ -1,7 +1,7 @@
 import Quaternion from "quaternion";
 import Color from "color";
 
-const STAR_NUM = 2000;
+const STAR_NUM = 10000;
 const LABELS = [
 	{text: "tostiex", v: [0, 1, 0]},
 	{text: "vined", v: [-1, 0, 0]},
@@ -12,13 +12,23 @@ const LABELS = [
 interface Star {
 	azimuth: number;
 	altitude: number;
+	drawRadius: number;
+	drawOpacity: number;
 }
 
 let stars: Star[] = [];
 for (let i = 0; i < STAR_NUM; i++) {
+	// let magnitude = 0.2 * (Math.log10(i + 1) - 0.754) / 0.4896;
+	// let brightness = Math.min(82.612 * Math.pow(100, -0.2 * magnitude), 1);
+	let brightness = Math.min(20 / Math.pow(Math.random() * STAR_NUM, 0.816993), 1);
+
+	let drawRadius = Math.sqrt(brightness) * 3 + 0.5;
+	let drawOpacity = brightness / drawRadius / drawRadius * 20.25;
+
 	stars.push({
 		azimuth: Math.random() * Math.PI * 2,
-		altitude: Math.asin(Math.random() * 2 - 1)
+		altitude: Math.asin(Math.random() * 2 - 1),
+		drawRadius, drawOpacity,
 	});
 }
 
@@ -141,8 +151,6 @@ function main() {
 			ctx.fillText(text, pos.x, pos.y);
 		}
 
-		ctx.fillStyle = "#fff";
-		ctx.strokeStyle = "#666";
 		ctx.lineWidth = 1;
 		for (const star of stars) {
 			const horizontal = h.rotateVector(sphericalToOrthogonal(star.azimuth, star.altitude));
@@ -151,10 +159,12 @@ function main() {
 			const pos = viewToScreen(v, scale, width, height, resolution);
 			if (pos == null) continue;
 			ctx.beginPath();
-			ctx.ellipse(pos.x, pos.y, 3, 3, 0, 0, Math.PI * 2);
+			ctx.ellipse(pos.x, pos.y, star.drawRadius, star.drawRadius, 0, 0, Math.PI * 2);
 			if (visible) {
+				ctx.fillStyle = `rgba(255, 255, 255, ${star.drawOpacity})`;
 				ctx.fill();
 			} else {
+				ctx.strokeStyle = `rgba(255, 255, 255, ${star.drawOpacity / 2})`;
 				ctx.stroke();
 			}
 		}
